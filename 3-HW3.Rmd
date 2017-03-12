@@ -11,7 +11,7 @@ output:
 
 ```{r}
 library(data.table)
-bookings <- fread('3-first_bookings_datetime_sample.txt')
+bookings <- fread('../3-first_bookings_datetime_sample.txt')
 
 datetime <- strptime(bookings$datetime, '%m/%d/%Y %H:%M')
 hours <- datetime$hour
