@@ -1,0 +1,253 @@
+---
+title: "Business Analytics using Statistical Modeling Assignment 10"
+output: pdf_document
+---
+
+# Question 1
+
+Understand each of these four scenarios by simulating them:
+
+Scenario 1: Consider a very narrowly dispersed set of points that have a negative or positive steep slope
+
+Scenario 2: Consider a widely dispersed set of points that have a negative or positive steep slope
+
+Scenario 3: Consider a very narrowly dispersed set of points that have a negative or positive shallow slope
+
+Scenario 4: Consider a widely dispersed set of points that have a negative or positive shallow slope
+
+## a. Let’s dig into what regression is doing to compute model fit:
+
+### i. Plot Scenario 2, storing the returned points: pts <- interactive_regression_rsq()
+
+```{r eval=FALSE}
+pts <- interactive_regression_rsq()
+```
+
+![Scenario 2](F:\screenshot\Screenshot_341.png)
+
+\newpage
+
+### ii. Run a linear model of x and y points to confirm the R2 value reported by the simulation:
+
+```{r eval=FALSE}
+regr <- lm(y ~ x, data = pts)
+summary(regr)
+
+Call:
+lm(formula = y ~ x, data = pts)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-18.0671  -6.8187  -0.4291   9.8094  13.1206 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)   7.6201     4.7774   1.595 0.136690    
+x             0.9992     0.2199   4.544 0.000673 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 10.82 on 12 degrees of freedom
+Multiple R-squared:  0.6324,	Adjusted R-squared:  0.6018 
+F-statistic: 20.65 on 1 and 12 DF,  p-value: 0.0006734
+```
+
+### iii. Add line segments to the plot to show the regression residuals (errors)
+
+Get the values  of $\hat{y}$ ( regression line’s estimates of y, given x)
+
+```{r eval=FALSE}
+y_hat <- regr$fitted.values
+segments(pts$x, pts$y, pts$x, y_hat, col = 'red', lty = 'dotted')
+```
+
+![Scenario 2 + line segments to show the regression residuals](F:\screenshot\Screenshot_342.png)
+
+### iv. Use only (pts$x), (pts$y), y_hat and mean(pts$y) to compute SSE, SSR and SST, and verify R2
+
+```{r eval=FALSE}
+sse <- sum((pts$y - y_hat) ^ 2)
+ssr <- sum((y_hat - mean(pts$y)) ^ 2)
+sst <- sse + ssr
+rsq <- ssr / sst
+rsq
+[1] 0.632422
+```
+
+## b. Comparing scenarios 1 and 2, which do we expect to have a stronger R2?
+
+Scenario 1
+
+## c. Comparing scenarios 3 and 4, which do we expect to have a stronger R2 ?
+
+Scenario 3
+
+## d. Comparing scenarios 1 and 2, which do we expect has bigger/smaller SSE, SSR, and SST? (do not compute SSE/SSR/SST here – just provide your intuition)
+
+Bigger SSE: Scenario 2
+
+Bigger SSR: Scenario 1
+
+Bigger SST: could be either way
+
+## e. Comparing scenarios 3 and 4, which do we expect has bigger/smaller SSE, SSR, and SST? (do not compute SSE/SSR/SST here – just provide your intuition)
+
+Bigger SSE: Scenario 4
+
+Bigger SSR: could be either way
+
+Bigger SST: Scenario 4
+
+# Question 2
+
+Take a look at a data set (auto-data.txt). We are interested in explaining what kind of cars have higher fuel efficiency (measured by mpg).
+
+1. mpg: miles-per-gallon (dependent variable)
+
+2. cyl: cylinders in engine
+
+3. disp: size of engine
+
+4. hp: power of engine
+
+5. w: weight of car
+
+6. acc: acceleration ability of car
+
+7. year: year model was released
+
+8. ori: place car was designed (1: USA, 2: Europe, 3: Japan)
+
+9. name: make and model names
+
+This data set has some missing values (‘?’ in data set), and it lacks a header row with variable names.
+
+```{r}
+auto <- read.table("../10-auto-data.txt", header = FALSE, na.strings = "?")
+names(auto) <- c("mpg", "cyl", "disp", "hp", "w", "acc", "year", "ori", "name")
+```
+
+\newpage
+
+## a. Let’s first try exploring this data and problem:
+
+### i. Visualize the data in any way you feel relevant.
+
+```{r}
+plot_mpg <- function(x) {
+  plot(auto[, x], auto$mpg, main = paste('mpg vs. ', names(auto)[x]), ylab = 'mpg',
+       xlab = names(auto)[x])
+  regr <- lm(auto$mpg ~ auto[, x])
+  regr_summary <- summary(regr)
+  abline(regr, lwd=2, col = "cornflowerblue")
+}
+par(mfrow = c(3, 3))
+for(i in 2:8) {
+  plot_mpg(i)
+}
+par(mfrow = c(1, 1))
+```
+
+\newpage
+
+### ii. Report a correlation table of all variables, rounding to two decimal places (in the cor(...) function, set use="pairwise.complete.obs" to handle missing values)
+
+```{r}
+auto_cor <- round(cor(auto[1:8], use = 'pairwise.complete.obs'), 2)
+library(pander)
+pandoc.table(auto_cor, style = 'rmarkdown', justify = 'right', plain.ascii = TRUE)
+```
+
+### iii. From the visualizations and correlations, which variables seem to relate to mpg?
+
+```{r}
+names(auto[2:8][, which(abs(
+  cor(auto$mpg, auto[2:8], use = 'pairwise.complete.obs')) > 0.7)])
+```
+
+\newpage
+
+### iv. Which relationships might not be linear?
+
+```{r}
+par(mfrow = c(3, 3))
+for(i in 2:8) {
+  plot(auto[, i], auto$mpg, main = paste('mpg vs. ', names(auto)[i]), ylab = 'mpg',
+       xlab = names(auto)[i])
+}
+par(mfrow = c(1, 1))
+```
+
+Seems like `mpg` is not linearly related with `displacement`, `horsepower`, and `weight`.
+
+\newpage
+
+### v. Are any of the independent variables highly correlated (r > 0.7) with others?
+
+```{r}
+diag(auto_cor) <- NA
+library(reshape2)
+auto_cor_melt <- melt(auto_cor)
+auto_cor_melt <- auto_cor_melt[complete.cases(auto_cor_melt), ]
+high_cor <- auto_cor_melt[auto_cor_melt$value > 0.7, ]
+high_cor[, 1:2] <- t(apply(high_cor[, 1:2], 1, sort))
+high_cor <- high_cor[!duplicated(high_cor), ]
+high_cor
+```
+
+\newpage
+
+## b. Let’s try an ordinary linear regression, where mpg is dependent upon all other suitable variables
+
+```{r}
+regr_mpg <- lm(mpg ~ cyl + disp + hp + w + acc + year + factor(ori), data = auto)
+summary(regr_mpg)
+```
+
+### i. Which factors have a ‘significant’ effect on mpg at 1% significance?
+
+`disp`, `weight`, `year`, and `origin`
+
+### ii. Looking at the coefficients, is it possible to determine which independent variables are the most effective at increasing mpg? If so, which ones, and if not, why not?
+
+It is hard to determine which independent variables are the most effective at increasing mpg, because they are all have different units.
+
+\newpage
+
+## c. Let’s try to resolve some of the issues with our regression model above.
+
+### i. Create fully standardized regression results: are these values easier to interpret?
+
+```{r}
+auto_std <- data.frame(scale(auto[c(1:7)]))
+auto_std$ori <- auto$ori
+regr_mpg_std <- lm(mpg ~ cyl + disp + hp + w + acc + year + factor(ori),
+                   data = auto_std)
+summary(regr_mpg_std)
+```
+
+Yes, it is easier to interpret.
+
+### ii. Regress mpg over each nonsignificant independent variable, individually. Which ones are significant if we regress mpg over them individually?
+
+\newpage
+
+```{r}
+sapply(auto_std[, c(2, 4, 6)], function(x) {
+  summary(lm(auto_std$mpg ~ x))
+})
+```
+
+All of them (`cyl`, `hp`, and `acc`) are significant if we regress mpg over them individually.
+
+### iii. Plot the density of the residuals: are they normally distributed and centered around zero?
+
+```{r}
+par(mfrow = c(1, 2))
+plot(density(regr_mpg$residuals), main = 'Ordinary Linear Regression')
+abline(v = 0, col = 'blue')
+plot(density(regr_mpg_std$residuals), main = 'Standardized Linear Regression')
+abline(v = 0, col = 'blue')
+```
+
+They both are centered around zero and almost normally distributed.
