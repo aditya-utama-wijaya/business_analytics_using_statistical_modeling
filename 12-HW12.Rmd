@@ -1,0 +1,248 @@
+---
+title: "Business Analytics using Statistical Modeling Assignment 12"
+output: pdf_document
+---
+
+Create a data.frame called cars_log with log-transformed columns (except model_year and origin – keep them in their original form)
+
+```{r}
+cars <- read.table("../10-auto-data.txt", header = FALSE, na.strings = "?")[-9]
+names(cars) <- c("mpg", "cylinders", "displacement", "horsepower", "weight",
+                 "acceleration", "model_year", "origin")
+cars_log <- with(cars, data.frame(log(mpg), log(cylinders), log(displacement),
+                                  log(horsepower), log(weight), log(acceleration),
+                                  model_year, origin))
+```
+
+# Question 1
+
+Let’s visualize how acceleration is related to mpg.
+
+## a. Let’s visualize how weight might moderate the relationship between acceleration and mpg:
+
+### i. Create two subsets of your data, one for light weight cars (less than mean weight) and one for heavy cars (higher than the mean weight)
+
+```{r}
+cars_light <- cars_log[cars_log$log.weight. <= log(mean(cars$weight)), ]
+cars_heavy <- cars_log[cars_log$log.weight. > log(mean(cars$weight)), ]
+```
+
+\newpage
+
+### ii. Create a single scatter plot of acceleration vs. mpg, with different colors and/or shapes for light versus heavy cars
+
+```{r}
+cars_log$wt_cat <- ifelse(cars_log$log.weight. > log(mean(cars$weight)), 'heavy', 'light')
+library(ggplot2)
+ggplot(cars_log, aes_string('log.acceleration.', 'log.mpg.')) +
+  geom_point(aes(color = factor(wt_cat))) +
+  ggtitle('log.mpg. vs log.acceleration. with color by weight categories')
+```
+
+\newpage
+
+### iii. Draw two slopes of acceleration versus mpg over the scatter plot: one for light cars and one for heavy cars (distinguish their appearance)
+
+```{r}
+ggplot(cars_log, aes_string('log.acceleration.', 'log.mpg.')) +
+  geom_point(aes(color = factor(wt_cat))) +
+  geom_smooth(method = 'lm', aes(color = factor(wt_cat))) +
+  ggtitle('log.mpg. vs log.acceleration. with color by weight categories')
+```
+
+\newpage
+
+## b. Report the full summaries of two separate regressions for light and heavy cars where log.mpg. is dependent on log.weight., log.acceleration., model_year, and origin
+
+```{r}
+summary(lm(log.mpg. ~ log.weight. + log.acceleration. + model_year + factor(origin),
+           data = cars_light))
+```
+
+\newpage
+
+```{r}
+summary(lm(log.mpg. ~ log.weight. + log.acceleration. + model_year + factor(origin),
+           data = cars_heavy))
+```
+
+## c. (not graded)
+
+# Question 2
+Using our full transformed dataset (cars_log), let’s test whether we have moderation.
+
+## a. (not graded)
+
+\newpage
+
+## b. Let’s use various regression models to test the possible moderation on our full data: (use independent variables log.weight., log.acceleration., model_year and origin)
+
+### i. Report a regression without any interaction terms
+
+```{r}
+regr_mpg_log1 <- lm(log.mpg. ~ log.weight. + log.acceleration. + model_year +
+                      factor(origin), data = cars_log)
+summary(regr_mpg_log1)
+```
+
+\newpage
+
+### ii. Report a regression with a raw interaction between weight and acceleration
+
+```{r}
+regr_mpg_log2 <- lm(log.mpg. ~ log.weight. + log.acceleration. + model_year +
+                      factor(origin) + log.weight. * log.acceleration., data = cars_log)
+summary(regr_mpg_log2)
+```
+
+\newpage
+
+### iii. Report a regression with a mean-centered interaction term
+
+```{r}
+wt_log_mc <- scale(cars_log$log.weight., center = TRUE, scale = FALSE)
+acc_log_mc <- scale(cars_log$log.acceleration., center = TRUE, scale = FALSE)
+mpg_log_mc <- scale(cars_log$log.mpg., center = TRUE, scale = FALSE)
+regr_mpg_log3 <- lm(mpg_log_mc ~ wt_log_mc + acc_log_mc + cars_log$model_year +
+                      factor(cars_log$origin) + wt_log_mc * acc_log_mc)
+summary(regr_mpg_log3)
+```
+
+\newpage
+
+### iv. Report a regression with an orthogonalized interaction term
+
+```{r}
+wt_x_acc <- cars_log$log.weight. * cars_log$log.acceleration.
+regr_wt_x_acc <- lm(wt_x_acc ~ cars_log$log.weight. + cars_log$log.acceleration.)
+regr_mpg_log4 <- lm(cars_log$log.mpg. ~ cars_log$log.weight. +
+                      cars_log$log.acceleration. + cars_log$model_year +
+                      factor(cars_log$origin) + regr_wt_x_acc$residuals)
+summary(regr_mpg_log4)
+```
+
+## c. For each of the interaction term strategies above (raw, mean-centered, orthogonalized) what is the correlation between that interaction term and the two variables that you multiplied together?
+
+Raw
+
+```{r}
+cor(cars_log$log.weight., cars_log$log.weight. * cars_log$log.acceleration.)
+cor(cars_log$log.acceleration., cars_log$log.weight. * cars_log$log.acceleration.)
+```
+
+\newpage
+
+Mean-centered
+
+```{r}
+cor(wt_log_mc, wt_log_mc * acc_log_mc)
+cor(acc_log_mc, wt_log_mc * acc_log_mc)
+```
+
+Orthogonalized
+
+```{r}
+cor(cars_log$log.weight., regr_wt_x_acc$residuals)
+cor(cars_log$log.acceleration., regr_wt_x_acc$residuals)
+```
+
+# Question 3
+We saw earlier that the number of cylinders does not seem to directly influence mpg when car weight is also considered. But might cylinders have an indirect relationship with mpg through its weight? (see blue variables in diagram)
+Let’s check whether weight mediates the relationship between cylinders and mpg, even when other factors are controlled for.  Acceleration, model_year, and origin are kept as control variables (see gray variables in diagram).
+
+\newpage
+
+![Conceptual Path Diagram of Mediated Model](F:\screenshot\Screenshot_349.png)
+
+## a. Let’s try out the steps of the Baron & Kenny (1984) method for checking for mediation:
+
+### i. Regress log.mpg. over log.cylinders. and all control variables
+
+```{r}
+regr_mpg_log5 <- lm(log.mpg. ~ log.cylinders. + log.acceleration. + model_year +
+                      factor(origin), data = cars_log)
+summary(regr_mpg_log5)
+```
+
+### Does cylinders have a significant direct effect on mpg when weight is not considered?
+
+Yes.
+
+### ii. Regress log.weight. over log.cylinders. only
+
+```{r}
+regr_wt_log <- lm(log.weight. ~ log.cylinders., data = cars_log)
+summary(regr_wt_log)
+```
+
+### Does cylinders have a significant direct effect on weight itself?
+
+Yes.
+
+\newpage
+
+### iii. Regress log.mpg. over log.weight. and all control variables
+
+```{r}
+summary(regr_mpg_log1)
+```
+
+### Does weight have a direct effect on mpg?
+
+Yes.
+
+If all steps (i) (ii) and (iii) have been significant, then we at least have “partial mediation”!
+
+We can do one more thing to see if we have full mediation:
+
+\newpage
+
+### iv. Regress log.mpg. on log.weight., log.cylinders., and all control variables
+
+```{r}
+regr_mpg_log6 <- lm(log.mpg. ~ log.weight. + log.cylinders. + log.acceleration. +
+                      model_year + factor(origin), data = cars_log)
+summary(regr_mpg_log6)
+```
+
+### Does cylinders have a significant direct effect on mpg when weight is also considered?
+
+No.
+
+If the coefficient of cylinders in step (iv) is not significant, then we have “full mediation”
+
+## b. What is the indirect effect of cylinders on mpg?
+
+```{r}
+regr_mpg_log7 <- lm(log.mpg. ~ log.weight., data = cars_log)
+indirect_effect <- regr_wt_log$coefficients[2] * regr_mpg_log7$coefficients[2]
+unname(indirect_effect)
+```
+
+## c. Let’s bootstrap for the confidence interval of the indirect effect of cylinders on mpg
+
+### i. Bootstrap regressions (ii) and (iii) to find the range of indirect effects: what is its 95% CI?
+
+```{r}
+boot_mediation <- function(model1, model2, dataset) {
+  boot_index <- sample(1:nrow(dataset), replace = TRUE)
+  data_boot <- dataset[boot_index, ]
+  regr1 <- lm(model1, data_boot)
+  regr2 <- lm(model2, data_boot)
+  return(regr1$coefficients[2] * regr2$coefficients[2])
+}
+set.seed(0)
+boot_indirect_effect <- replicate(2000, boot_mediation(regr_wt_log, regr_mpg_log7,
+                                                       cars_log))
+ci_95 <- quantile(boot_indirect_effect, probs = c(0.025, 0.975))
+ci_95
+```
+
+\newpage
+
+### ii. Show a density plot of the distribution of the 95% CI of the indirect effect
+
+```{r}
+plot(density(boot_indirect_effect), bty = 'l')
+abline(v = ci_95, col = 'blue', lty = 2, lwd = 2)
+```
