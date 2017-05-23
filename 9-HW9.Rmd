@@ -46,7 +46,7 @@ head(cos_top5_recos)
 ```{r}
 top5_recos <- function(ac_bundles_matrix) {
   sim_matrix <- cosine(ac_bundles_matrix)
-  diag(sim_matrix) <- NA
+  diag(sim_matrix) <- -1
   bundle_reco <- function(bundle_cos) names(sort(bundle_cos, decreasing = TRUE))
   all_recos <- t(apply(sim_matrix, 1, bundle_reco))
   top5_recos <- all_recos[, 1:5]

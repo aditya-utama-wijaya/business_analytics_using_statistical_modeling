@@ -1,0 +1,180 @@
+---
+title: "Business Analytics using Statistical Modeling Assignment 14"
+output: pdf_document
+---
+
+Let’s reconsider the security questionnaire from last week, where consumers were asked security related questions about one of the e-commerce websites they had recently used.
+
+```{r}
+library(openxlsx)
+sec_qs <- read.xlsx('../13-security_questions.xlsx', sheet = 'data')
+```
+
+# Question 1
+
+We saw that identifying the number of principal components to keep can be challenging.
+
+## a. Report your earlier findings from applying the “eigenvalue > 1” and screeplot criteria to the security dataset.
+
+```{r}
+sec_qs_pca <- prcomp(sec_qs, scale. = TRUE)
+screeplot(sec_qs_pca, type = 'l', npcs = 18, main = 'Scree Plot of Security Questions')
+eigen(cor(sec_qs), 2)$values
+```
+
+Based on the scree plot criteria, we should retain 1 factor in our analysis.
+
+Based on the eigenvalues criteria (eigenvalue > 1), we should retain 3 factors in our analysis.
+
+\newpage
+
+## b. Perform a parallel analysis to find out how many principal components have higher eigenvalues than their counterparts in random datasets of the same dimensions as the security dataset.
+
+```{r}
+sim_noise <- function(n, p) {
+  noise <- data.frame(replicate(p, rnorm(n)))
+  return(eigen(cor(noise))$values)
+}
+
+set.seed(0)
+evalues_noise <- replicate(10000, sim_noise(nrow(sec_qs), ncol(sec_qs)))
+
+evalues_mean <- apply(evalues_noise, 1, mean)
+
+screeplot(sec_qs_pca, type = 'l', npcs = 18, main = 'Eigenvalues: seq_qs vs. noise')
+lines(evalues_mean, type = 'b', col = 'red')
+abline(h = 1, lty = 2)
+```
+
+There are 2 principal components which have higher eigenvalues than their counterparts in random datasets of the same dimensions as the security dataset.
+
+# Question 2
+Earlier, we examined the eigenvectors of the security dataset. This time, let’s examine loadings of our principal components (use the `principal()` method from the `psych` package).
+
+```{r}
+library(psych)
+sec_qs_principal <- principal(sec_qs, nfactor = 18, rotate = 'none', scores = TRUE)
+```
+
+## a. Looking at the loadings of the first 3 principal components, to which components does each item seem to belong?
+
+```{r}
+loadings <- sec_qs_principal$loadings
+loadings[, 1][abs(loadings[, 1]) > 0.7]
+loadings[, 2][abs(loadings[, 2]) > 0.7]
+loadings[, 3][abs(loadings[, 3]) > 0.7]
+```
+
+## b. How much of the total variance of the security dataset does the first 3 PCs capture?
+
+```{r}
+paste(round(sec_qs_principal$Vaccounted[3, 3] * 100, 2), '%', sep = '')
+```
+
+## c. Looking at commonality and uniqueness, which item’s variance is least explained by the first 3 principal components?
+
+```{r}
+sec_qs_pca_ori <- principal(sec_qs, nfactors = 3, rotate = 'none', scores = TRUE)
+names(which.min(sec_qs_pca_ori$communality))
+```
+
+\newpage
+
+## d. How many measurement items share similar loadings between 2 or more components?
+
+```{r}
+loadings_ori <- loadings[, 1:3]
+sim_loads <- function(loadings, x) {
+  return((abs(loadings[x, 1] - loadings[x, 2]) < 0.1 |
+           abs(loadings[x, 2] - loadings[x, 3]) < 0.1 |
+           abs(loadings[x, 1] - loadings[x, 3]) < 0.1) &
+           (loadings[x, 1] < 0.7 & loadings[x, 2] < 0.7 & loadings[x, 3] < 0.7)
+         )
+}
+sim_loads(loadings_ori, 1:18)
+```
+
+There are 3 items (Q4, Q12, and Q17) that share similar loadings.
+
+## e. Can you distinguish a ‘meaning’ behind the first principal component from the items that load best upon it? (see the wording of the questions of those items)
+
+\newpage
+
+![Items that seem to belong to first principal component](F:\screenshot\Screenshot_352.png)
+
+Looking at the wording of the questions, it seems like they are related to information confidentiality.
+
+# Question 3
+To improve interpretability of loadings, let’s rotate our principal component axes to get rotated components (extract and rotate only three principal components)
+
+```{r}
+sec_qs_pca_rot <- principal(sec_qs, nfactors = 3, rotate = 'varimax', scores = TRUE)
+```
+
+## a. Individually, does each rotated component explain the same, or different, amount of variance than the three principal components?
+
+```{r}
+sec_qs_pca_ori$Vaccounted[4, ]
+sec_qs_pca_rot$Vaccounted[4, ]
+```
+
+Each rotated component explains the different amount of variance than the three principal components.
+
+## b. Together, do the three rotated components explain the same, more, or less cumulative variance as the three principal components combined?
+
+```{r}
+paste(round(sec_qs_pca_ori$Vaccounted[3, 3] * 100, 2), '%', sep = '')
+paste(round(sec_qs_pca_rot$Vaccounted[3, 3] * 100, 2), '%', sep = '')
+```
+
+Together, the three rotated components explain the same cumulative variance as the three principal components combined.
+
+## c. Looking back at the items that shared similar loadings with multiple principal components, do those items have more clearly differentiated loadings among rotated components?
+
+```{r}
+loadings_rot <- sec_qs_pca_rot$loadings[, 1:3]
+loadings_ori[c(4, 12, 17), ]
+loadings_rot[c(4, 12, 17), ]
+```
+
+Yes. those items have 1 loading that is more than 0.7, so they have more clearly differentiated loadings among rotated components.
+
+## d. Can you now interpret the “meaning” of the 3 rotated components from the items that load best upon each of them? (see the wording of the questions of those items)
+
+```{r}
+loadings_rot[, 1][abs(loadings_rot[, 1]) > 0.7]
+```
+
+Items 7, 9, 11, 14, and 16 load best upon RC1.
+
+The questions are related to the protection of users' personal information.
+
+\newpage
+
+```{r}
+loadings_rot[, 2][abs(loadings_rot[, 2]) > 0.7]
+```
+
+Items 5, 8, and 10 load best upon RC3.
+
+The questions are related to the transaction sending process.
+
+```{r}
+loadings_rot[, 3][abs(loadings_rot[, 3]) > 0.7]
+```
+
+Items 4, 12, and 17 load best upon RC2.
+
+The questions are related to the transaction authorization and confirmation.
+
+## e. If we reduced the number of extracted and rotated components to 2, does the meaning of our rotated components change?
+
+```{r}
+sec_qs_pca_rot2 <- principal(sec_qs, nfactors = 2, rotate = 'varimax', scores = TRUE)
+loadings_rot2 <- sec_qs_pca_rot2$loadings[, 1:2]
+loadings_rot2[, 1][abs(loadings_rot2[, 1]) > 0.7]
+loadings_rot2[, 2][abs(loadings_rot2[, 2]) > 0.7]
+```
+
+The items that load best upon RC1 and RC2 when we used 3 rotated components, are all still load best upon RC1 and RC2 if we used 2 rotated components.
+It means that the meaning of our rotated components does not change.

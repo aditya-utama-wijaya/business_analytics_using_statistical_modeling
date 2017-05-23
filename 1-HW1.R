@@ -1,4 +1,4 @@
-exam = read.table('1-exam_results.txt', header = TRUE)
+exam = read.table('../1-exam_results.txt', header = TRUE)
 
 exam$scores[5]
 
