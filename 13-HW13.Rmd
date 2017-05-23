@@ -1,0 +1,157 @@
+---
+title: "Business Analytics Using Statistical Modeling Assignment 13"
+output: pdf_document
+---
+
+# Question 1
+Due to strong multicollinearity between cylinders, displacement, horsepower, and weight, we removed them all except for weight in our earlier regression model.
+
+This time, let’s try to capture as much variance of all these independent variables as possible.
+
+Let’s start by recreating the `cars_log` dataset, which log-transforms all variables except model year and origin.
+
+```{r}
+cars <- read.table("../10-auto-data.txt", header = FALSE, na.strings = "?")[-9]
+names(cars) <- c("mpg", "cyl", "disp", "hp", "wei", "acc", "year", "ori")
+cars <- na.omit(cars)
+cars_log <- with(cars, data.frame(log(mpg), log(cyl), log(disp), log(hp), log(wei),
+                                  log(acc), year, ori))
+```
+
+## a. Create a new data.frame of the four log-transformed independent variables with multicollinearity.
+
+### i. Give this smaller data frame an appropriate name (think what they jointly mean)
+
+```{r}
+multicol_vars <- cars_log[, c("log.cyl.", "log.disp.", "log.hp.", "log.wei.")]
+```
+
+### ii. Check the correlation table of these four variables to confirm they are indeed collinear
+
+```{r}
+cor(multicol_vars)
+```
+
+## b. Let’s analyze the principal components of the four collinear variables
+
+### i. How many principal components are needed to summarize these four variables?
+
+```{r}
+eigens <- eigen(cor(multicol_vars))
+eigens$values
+multicol_vars_pca <- prcomp(multicol_vars, scale. = TRUE)
+```
+
+\newpage
+
+```{r}
+screeplot(multicol_vars_pca, type = 'l', main = 'Scree Plot of multicol_vars')
+```
+
+Based on both the eigenvalues and scree plot criteria, we only need 1 principal components to summarize these 4 variables.
+
+### ii. How much variance of the four variables is explained by their first principal component?
+
+```{r}
+paste(round(eigens$values[1] / sum(eigens$values) * 100, 2), '%', sep = '')
+```
+
+### iii. Looking at the values and valence (positive/negative) of the first principal component’s eigenvector, what would you call the information captured by this component? (i.e., think what the first principal component means)
+
+```{r}
+eigens$vectors
+```
+
+Light cars.
+
+## c. Let’s reduce the four collinear variables into one new variable!
+
+### i. Store the scores of the first principal component as a new column of cars_log
+
+### ii. Name this column appropriately based on the meaning of this first principal component
+
+```{r}
+cars_log$PC1_scores <- multicol_vars_pca$x[, "PC1"]
+```
+
+## d. Let’s revisit our regression analysis on cars_log:
+
+```{r}
+cars_log_std <- as.data.frame(scale(cars_log[, c(1:7, 9)]))
+cars_log_std$ori <- cars_log$ori
+```
+
+### i. Regress mpg over weight, acceleration, model_year and origin
+
+```{r}
+regr_mpg_log1 <- lm(log.mpg. ~ log.wei. + log.acc. + year + factor(ori),
+                    data = cars_log_std)
+summary(regr_mpg_log1)
+```
+
+\newpage
+
+### ii. Repeat the regression, but replace weight with the factor scores of the 1st principal component of our collinear independent variables
+
+```{r}
+regr_mpg_log2 <- lm(log.mpg. ~ log.acc. + year + factor(ori) + PC1_scores,
+                    data = cars_log_std)
+summary(regr_mpg_log2)
+```
+
+### iii. Use VIF scores to check whether the either regression suffers from multicollinearity
+
+```{r}
+library(car)
+vif(regr_mpg_log1)
+vif(regr_mpg_log2)
+```
+
+Either regression does not suffer from multicollinearity.
+
+### iv. (ungraded)
+
+# Question 2
+An online marketing firm is studying how customers who shop on e-commerce websites over the winter holiday season perceive the security of e-commerce sites.
+
+Based on feedback from experts, the company has created eighteen questions (see ‘questions’ tab of excel file) regarding important security considerations at e-commerce websites.
+
+Over 400 customers responded to these questions (see ‘data’ tab of Excel file).
+
+Respondents were asked to consider a shopping site they were familiar with when answering questions (site was chosen randomly from those each subject has recently visited).
+
+The company now wants to use the results of these eighteen questions to reveal if there are some underlying dimensions of people’s perception of online security that effectively capture the variance of these eighteen questions.
+
+Let’s analyze the principal components of the eighteen items.
+
+```{r}
+library(openxlsx)
+sec_qs <- read.xlsx('../13-security_questions.xlsx', sheet = 'data')
+```
+
+## a. How much variance did each extracted factor explain?
+
+```{r}
+library(psych)
+sec_qs_principal <- principal(sec_qs, nfactor = 18, rotate = 'none', scores = TRUE)
+round(sec_qs_principal$Vaccounted[2:3, ], 2)
+```
+
+\newpage
+
+## b. Show a scree plot of factors extracted
+
+```{r}
+sec_qs_pca <- prcomp(sec_qs, scale. = TRUE)
+screeplot(sec_qs_pca, type = 'l', npcs = 18, main = 'Scree Plot of Security Questions')
+```
+
+## c. How many factors should we retain in our analysis? (judge using the criteria we’ve discussed)
+
+```{r}
+round(sec_qs_principal$values, 2)
+```
+
+Based on both the eigenvalues and scree plot criteria, we should retain 1 factor in our analysis.
+
+## d. (ungraded)
