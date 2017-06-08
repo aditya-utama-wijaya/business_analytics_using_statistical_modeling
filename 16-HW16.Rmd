@@ -1,0 +1,62 @@
+---
+title: "Business Analytics using Statistical Modeling Assignment 15"
+output: pdf_document
+---
+
+We will keep working on the model from our last assignment, though we will now remove factors that were insignificant in our prior study:
+
+Reputation (REP) + Policies (POL) + Perceived Website Investment (INV) + Familiarity (FAML) → Perceived Security (SEC) → Trust (TRUST)
+
+Note: REP, POL, INV, and FAML are antecedents; SEC is a mediator; and TRUST is the outcome
+
+# Question 1
+
+Let’s check the measurement quality criteria for our model.
+
+## a. Check item reliability of all factors:
+
+### i. Reflective factors: λ > 0.70
+
+### “Do items individually share variance with their proper constructs?”
+
+### ii. Formative factors: VIF of items < 5
+
+### “Do items individually contribute substantially meaningful variance to their constructs?
+
+## b. Convergent validity (reflective factors only):
+
+### i. Composite Reliability (CR) of factors: CR > 0.70
+
+### “How much do the items of a reflect factor agree with one another?”
+
+### ii. Average Variance Extracted (AVE) of factors: AVE > 0.50
+
+### “How much variance, on average, does a reflective factor explain of its own items?”
+
+## c. Discriminant Validity (reflective factors only):
+
+### i. Loadings of all items on own factors greater than cross-loadings with other factors
+
+### “Are items more correlated with their own factors than other factors?”
+
+### ii. Correlation of factor with other factors smaller than factor’s square root of AVE
+
+### “Is a factor more related to its own items than it is to other factors?”
+
+# Question 2
+
+Does SEC really mediate relationships between REP, POL, INV → TRUST?
+
+## a. With each of the three factors (REP, POL, INV), check the four parts of the mediation analysis we discussed in class
+
+### i. Try using three models to test for mediation:
+
+#### - the proposed model
+
+#### - the proposed model without the mediator
+
+#### - the proposed model with paths from antecedents to outcomes
+
+### ii. When testing each of the three factors (REP, POL, INV), remove the other two factors, but keep FAML as a control
+
+## b. Which factors are fully mediated by SEC, which are partially mediated by SEC, and which are not at all mediated by SEC?
